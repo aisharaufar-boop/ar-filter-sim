@@ -1,1 +1,132 @@
-test 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR Filter Simulation</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --fg: #fff;
+      --muted: #b3b3b3;
+      --accent: #ff2d55;
+      --ig-grad-a: #fdd6d1;
+      --ig-grad-b: #ffe8d0;
+    }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; }
+    .app { display: grid; place-items: center; min-height: 100%; padding: 16px; }
+
+    .phone {
+      width: min(420px, 92vw);
+      aspect-ratio: 9/19.5;
+      background: #000;
+      border-radius: 28px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.6);
+      position: relative;
+      overflow: hidden;
+    }
+    .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 38%; height: 28px; background: #000; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; }
+
+    .skin { position: absolute; inset: 0; display: grid; grid-template-rows: 44px 1fr 72px; }
+    .skin.tiktok { background: #000; }
+    .skin.instagram { background: linear-gradient(180deg, var(--ig-grad-a), var(--ig-grad-b)); color: #111; }
+
+    .topbar { display: flex; align-items: center; justify-content: center; position: relative; font-weight: 600; }
+    .timer { font-variant-numeric: tabular-nums; }
+    .meta { position: absolute; left: 12px; font-size: 12px; color: var(--muted); }
+
+    .video-wrap { position: relative; margin: 0 auto; height: 100%; display: grid; place-items: center; }
+    .video-frame { width: 88%; aspect-ratio: 9/16; background: #111; border-radius: 12px; overflow: hidden; }
+    .placeholder { display: grid; place-items: center; width: 100%; height: 100%; color: #888; font-size: 14px; }
+
+    .side { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: grid; gap: 14px; }
+    .icon { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.08); display: grid; place-items: center; font-size: 14px; color: #fff; }
+
+    .bottombar { display: flex; align-items: center; justify-content: center; gap: 22px; }
+    .capture { width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--accent); background: transparent; }
+
+    .overlay { position: absolute; inset: 0; background: rgba(0,0,0,.74); display: none; }
+    .overlay.show { display: grid; place-items: center; padding: 24px; }
+    .card { width: min(360px, 92%); background: #111; color: #fff; border-radius: 14px; padding: 20px; }
+    .card h2 { margin: 0 0 10px; font-size: 18px; }
+    .opts { display: grid; gap: 12px; margin-top: 10px; }
+    .btn { padding: 12px; border-radius: 10px; background: #1f6feb; color: white; font-weight: 600; cursor: pointer; border: none; }
+    .btn.secondary { background: #2a2a2a; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .toast { position: absolute; top: 56px; right: 12px; background: rgba(0,0,0,.6); color: #fff; padding: 6px 10px; border-radius: 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="skin tiktok" id="skin">
+        <div class="topbar">
+          <div class="meta" id="meta">Condition: TikTok · Playful</div>
+          <div class="timer" id="timer">3:00</div>
+        </div>
+        <div class="video-wrap">
+          <div class="video-frame">
+            <div class="placeholder">[Insert demo video here]</div>
+          </div>
+          <div class="side" id="sideIcons">
+            <div class="icon">❤</div>
+            <div class="icon">💬</div>
+            <div class="icon">↗</div>
+          </div>
+        </div>
+        <div class="bottombar">
+          <div class="capture"></div>
+        </div>
+        <div class="overlay" id="overlay">
+          <div class="card">
+            <h2>Manipulation Check</h2>
+            <p>The filter you just saw felt…</p>
+            <div class="opts">
+              <label><input type="radio" name="mc" value="Playful" /> Playful</label>
+              <label><input type="radio" name="mc" value="Realistic" /> Realistic</label>
+            </div>
+            <button class="btn" id="submitBtn">Continue</button>
+          </div>
+        </div>
+        <div class="toast hidden" id="toast"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const platform = (qs.get('platform') || 'tiktok').toLowerCase();
+    const filterType = (qs.get('filter') || 'playful').toLowerCase();
+
+    const skin = document.getElementById('skin');
+    const meta = document.getElementById('meta');
+    const timerEl = document.getElementById('timer');
+    const overlay = document.getElementById('overlay');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function applySkin(){
+      if(platform === 'instagram'){
+        skin.classList.remove('tiktok');
+        skin.classList.add('instagram');
+      }
+      meta.textContent = `${platform.charAt(0).toUpperCase()+platform.slice(1)} · ${filterType.charAt(0).toUpperCase()+filterType.slice(1)}`;
+    }
+
+    let remaining = 180;
+    timerEl.textContent = "3:00";
+    const iv = setInterval(()=>{
+      remaining--;
+      let m = Math.floor(remaining/60), s = remaining%60;
+      timerEl.textContent = `${m}:${String(s).padStart(2,'0')}`;
+      if(remaining <= 0){ clearInterval(iv); overlay.classList.add('show'); }
+    },1000);
+
+    submitBtn.addEventListener('click', ()=>{
+      alert("Response submitted! (Here you would redirect to Qualtrics)");
+    });
+
+    applySkin();
+  </script>
+</body>
+</html>
