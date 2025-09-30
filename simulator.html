@@ -75,7 +75,7 @@
 <div class="video-wrap">
   <div class="video-frame">
     <!-- Selfie display goes here -->
-    <img id="selfie" alt="Selfie" style="width:100%; height:100%; object-fit:cover;">
+    <img id="selfie" alt="Selfie" style="display:none; width:100%; height:100%; object-fit:contain; background:#000;" />
     
     <!-- Filter overlays -->
     <div id="playfulOverlay" style="display:none; position:absolute; inset:0; pointer-events:none;">
@@ -183,30 +183,40 @@ selfieInput.addEventListener('change', () => {
     reader.readAsDataURL(file);
 });
 
-// When Start clicked → show phone + apply overlay + begin timer
+// Timer function to keep countdown working
+function startTimer() {
+  let remaining = 60; // or whatever value you want
+  const timer = setInterval(() => {
+    remaining--;
+    timerEL.textContent = `0:${remaining < 10 ? '0' : ''}${remaining}`;
+    if (remaining <= 0) {
+      clearInterval(timer);
+    }
+  }, 1000);
+}
+    // When Start clicked → show phone + apply overlay + begin timer
 startBtn.addEventListener('click', () => {
-  uploader.style.display = 'none';
-  phoneEl.style.display = 'block';
+    // Hide uploader and show phone frame
+    uploader.style.display = 'none';
+    phoneEL.style.display = 'block';
 
-  applySkin(); // keep using your existing function
-  if (filterType === 'playful') {
-    playfulOverlay.style.display = 'block';
-    realisticOverlay.style.display = 'none';
-  } else {
-    realisticOverlay.style.display = 'block';
-    playfulOverlay.style.display = 'none';
-  }
+    // Apply platform skin (TikTok/Instagram)
+    applySkin();
 
-  if (filterType === 'playful') {
-    playfulOverlay.style.display = 'block';
-    realisticOverlay.style.display = 'none';
-  } else {
-    realisticOverlay.style.display = 'block';
-    playfulOverlay.style.display = 'none';
-  }
+    // Show the correct overlay based on filter type
+    if (filterType === 'playful') {
+        playfulOverlay.style.display = 'block';
+        realisticOverlay.style.display = 'none';
+    } else {
+        realisticOverlay.style.display = 'block';
+        playfulOverlay.style.display = 'none';
+    }
 
-  remaining = 60;  // reset to 1 minute
-  startTimer();     // call your existing timer function
+    // Reset timer to 60s
+    remaining = 60;
+
+    // ✅ Start the countdown after clicking Start
+    startTimer();
 });
 
     function applySkin(){
