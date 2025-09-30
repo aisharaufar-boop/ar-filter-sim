@@ -162,7 +162,7 @@
 
 // Show selfie preview + enable start button
 selfieInput.addEventListener('change', () => {
-  const file = selfieInput.files && selfieInput.files[0];
+    const file = selfieInput.files && selfieInput.files[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -170,7 +170,7 @@ selfieInput.addEventListener('change', () => {
         selfieImg.src = e.target.result;
         selfieImg.style.display = 'block';
 
-        // Enable the start button
+        // ✅ Enable start button
         startBtn.disabled = false;
         startBtn.removeAttribute('disabled');
         startBtn.style.cursor = 'pointer';
@@ -178,6 +178,7 @@ selfieInput.addEventListener('change', () => {
     };
     reader.readAsDataURL(file);
 });
+
 
 // When Start clicked → show phone + apply overlay + begin timer
 startBtn.addEventListener('click', () => {
