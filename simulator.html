@@ -7,131 +7,154 @@
     body {
       margin: 0;
       background: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      color: white;
+      font-family: Arial, sans-serif;
     }
 
-    #uploader {
-      display: grid;
-      gap: 12px;
-      place-items: center;
-      padding: 16px;
-    }
-
-    #phone {
-      display: none;
+    .phone {
       position: relative;
-      width: 320px;
+      width: 300px;
       height: 600px;
+      border: 8px solid #111;
       border-radius: 36px;
-      background: #111;
       overflow: hidden;
-      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      background: #000;
+      display: none; /* hidden until Start */
     }
 
-    .video-wrap {
-      position: absolute;
-      inset: 0;
+    .video-frame {
+      width: 100%;
+      height: 100%;
       overflow: hidden;
+      position: relative;
     }
 
     #selfie {
-      display: none;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center;
-      z-index: 1;
-      border-radius: 36px;
-    }
-
-    #playfulOverlay,
-    #realisticOverlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
       display: none;
-      z-index: 2;
     }
 
-    /* playful look */
-    #playfulOverlay {
-      background: rgba(255,200,50,0.08);
-    }
-
-    /* realistic look */
-    #realisticOverlay {
-      background: radial-gradient(
-        ellipse at center,
-        rgba(255,255,255,0.08) 0%,
-        rgba(0,0,0,0.25) 85%
-      );
-    }
-
-    .timer {
+    /* Timer top-left */
+    #timer {
       position: absolute;
       top: 8px;
       left: 12px;
       font-size: 16px;
       font-weight: bold;
-      z-index: 3;
+      color: white;
+      z-index: 5;
     }
 
-    button {
-      padding: 10px 16px;
-      border-radius: 8px;
+    /* Playful filter = rainbow + emojis */
+    #playfulOverlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: rgba(255, 0, 150, 0.15);
+      animation: rainbow 5s linear infinite;
+      z-index: 4;
+    }
+    @keyframes rainbow {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+    .emoji {
+      position: absolute;
+      font-size: 24px;
+      animation: floatUp 4s linear infinite;
+    }
+    @keyframes floatUp {
+      from { transform: translateY(100%); opacity: 1; }
+      to { transform: translateY(-120%); opacity: 0; }
+    }
+
+    /* Realistic filter = beauty vibe */
+    #realisticOverlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: contrast(1.3) brightness(1.1);
+      box-shadow: inset 0 0 80px rgba(0,0,0,0.3);
+      z-index: 4;
+    }
+
+    /* Popup */
+    #popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #111;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      z-index: 10;
+    }
+
+    #popup button {
+      margin: 10px;
+      padding: 8px 14px;
       border: none;
-      background: #1f6feb;
-      color: white;
-      font-weight: bold;
+      border-radius: 8px;
+      font-size: 14px;
       cursor: pointer;
     }
 
-    button:disabled {
-      background: #666;
-      cursor: not-allowed;
-    }
+    #popup .playful { background: hotpink; color: white; }
+    #popup .realistic { background: lightblue; color: black; }
   </style>
 </head>
 <body>
 
-  <!-- Upload screen -->
+  <!-- Upload section -->
   <div id="uploader">
-    <h3>Take/Upload a Selfie</h3>
-    <p style="font-size:14px;color:#bbb">Front camera, portrait, neutral lighting. No stickers or text.</p>
+    <h2>Take/Upload a Selfie</h2>
     <input id="selfieInput" type="file" accept="image/*" capture="user">
-    <button id="startBtn" disabled>Start exposure</button>
+    <button id="startBtn" disabled>Start Exposure</button>
   </div>
 
-  <!-- Phone screen -->
-  <div id="phone">
-    <div class="video-wrap">
+  <!-- Phone simulator -->
+  <div class="phone" id="phone">
+    <div id="timer">1:00</div>
+    <div class="video-frame">
       <img id="selfie" alt="Selfie">
       <div id="playfulOverlay"></div>
       <div id="realisticOverlay"></div>
-      <div class="timer" id="timer">1:00</div>
     </div>
   </div>
 
+  <!-- Manipulation check popup -->
+  <div id="popup">
+    <h3>The filter you just saw felt...</h3>
+    <button class="playful">Playful</button>
+    <button class="realistic">Realistic</button>
+  </div>
+
   <script>
-    const uploader = document.getElementById("uploader");
     const selfieInput = document.getElementById("selfieInput");
-    const startBtn = document.getElementById("startBtn");
-    const phone = document.getElementById("phone");
     const selfieImg = document.getElementById("selfie");
+    const startBtn = document.getElementById("startBtn");
+    const phoneEl = document.getElementById("phone");
     const timerEl = document.getElementById("timer");
     const playfulOverlay = document.getElementById("playfulOverlay");
     const realisticOverlay = document.getElementById("realisticOverlay");
+    const popup = document.getElementById("popup");
 
-    let filterType = "playful"; // default
+    let remaining = 60;
+    let timer;
 
-    // Enable button when file chosen
     selfieInput.addEventListener("change", () => {
-      const file = selfieInput.files && selfieInput.files[0];
+      const file = selfieInput.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = e => {
@@ -142,34 +165,52 @@
       reader.readAsDataURL(file);
     });
 
-    // Timer
-    function startTimer() {
-      let remaining = 60;
-      timerEl.textContent = "1:00";
-      const t = setInterval(() => {
-        remaining--;
-        const m = Math.floor(remaining/60);
-        const s = remaining % 60;
-        timerEl.textContent = `${m}:${s<10?"0":""}${s}`;
-        if (remaining <= 0) clearInterval(t);
-      }, 1000);
-    }
-
-    // Start experiment
     startBtn.addEventListener("click", () => {
-      uploader.style.display = "none";
-      phone.style.display = "block";
+      document.getElementById("uploader").style.display = "none";
+      phoneEl.style.display = "block";
 
+      // randomize filter for demo
+      const filterType = Math.random() > 0.5 ? "playful" : "realistic";
       if (filterType === "playful") {
         playfulOverlay.style.display = "block";
-        realisticOverlay.style.display = "none";
+        spawnEmojis();
       } else {
         realisticOverlay.style.display = "block";
-        playfulOverlay.style.display = "none";
       }
 
       startTimer();
     });
+
+    function startTimer() {
+      remaining = 60;
+      timerEl.textContent = "1:00";
+      timer = setInterval(() => {
+        remaining--;
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        timerEl.textContent = `${m}:${s < 10 ? "0" : ""}${s}`;
+        if (remaining <= 0) {
+          clearInterval(timer);
+          showPopup();
+        }
+      }, 1000);
+    }
+
+    function showPopup() {
+      popup.style.display = "block";
+    }
+
+    function spawnEmojis() {
+      const emojis = ["✨", "🌈", "😜", "😂"];
+      setInterval(() => {
+        const emoji = document.createElement("div");
+        emoji.className = "emoji";
+        emoji.style.left = Math.random() * 80 + "%";
+        emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        playfulOverlay.appendChild(emoji);
+        setTimeout(() => emoji.remove(), 4000);
+      }, 1000);
+    }
   </script>
 </body>
 </html>
