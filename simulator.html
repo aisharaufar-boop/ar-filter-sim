@@ -163,22 +163,28 @@
 // Show selfie preview + enable start button
 selfieInput.addEventListener('change', () => {
     const file = selfieInput.files && selfieInput.files[0];
-    if (!file) return;
+    console.log("📸 File selected:", file);
+
+    if (!file) {
+        console.log("❌ No file detected");
+        return;
+    }
 
     const reader = new FileReader();
     reader.onload = e => {
         selfieImg.src = e.target.result;
         selfieImg.style.display = 'block';
+        console.log("✅ Selfie preview loaded");
 
-        // ✅ Enable start button
+        // Enable start button
         startBtn.disabled = false;
         startBtn.removeAttribute('disabled');
         startBtn.style.cursor = 'pointer';
         startBtn.style.opacity = '1';
+        console.log("✅ Start button enabled");
     };
     reader.readAsDataURL(file);
 });
-
 
 // When Start clicked → show phone + apply overlay + begin timer
 startBtn.addEventListener('click', () => {
