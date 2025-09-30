@@ -72,11 +72,26 @@
         <div class="topbar">
           <div class="meta" id="meta">Condition: TikTok · Playful</div>
           <div class="timer" id="timer">1:00</div>
-        </div>
-        <div class="video-wrap">
-          <div class="video-frame">
-            <!-- Selfie display goes here -->
-<img id="selfie" alt="Selfie" style="display:none; width:100%; height:100%; object-fit:cover;">
+<div class="video-wrap">
+  <div class="video-frame">
+    <!-- Selfie display goes here -->
+    <img id="selfie" alt="Selfie" style="width:100%; height:100%; object-fit:cover;">
+    
+    <!-- Filter overlays -->
+    <div id="playfulOverlay" style="display:none; position:absolute; inset:0; pointer-events:none;">
+      <!-- Fun tint + emojis -->
+      <div style="position:absolute; inset:0; background:rgba(255,200,50,0.08);"></div>
+      <div style="position:absolute; inset:0; animation:hue 5s linear infinite;"></div>
+      <div style="position:absolute; right:12px; top:12px; font-size:28px;">✨</div>
+      <div style="position:absolute; left:18px; bottom:18px; font-size:28px;">😜</div>
+    </div>
+
+    <div id="realisticOverlay" style="display:none; position:absolute; inset:0; pointer-events:none;">
+      <!-- Beauty vibe -->
+      <div style="position:absolute; inset:0; background:radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.18) 85%);"></div>
+    </div>
+  </div>
+</div>
 
 <!-- Filter overlays (we toggle one of these by condition) -->
 <div id="playfulOverlay" style="display:none; position:absolute; inset:0; pointer-events:none;">
@@ -126,6 +141,11 @@
     const platform = (qs.get('platform') || 'tiktok').toLowerCase();
     const filterType = (qs.get('filter') || 'playful').toLowerCase();
 
+    const selfieImg = document.getElementById('selfie');
+    const playfulOverlay = document.getElementById('playfulOverlay');
+    const realisticOverlay = document.getElementById('realisticOverlay');
+
+
     const skin = document.getElementById('skin');
     const meta = document.getElementById('meta');
     const timerEl = document.getElementById('timer');
@@ -160,6 +180,13 @@ startBtn.addEventListener('click', () => {
   phoneEl.style.display = 'block';
 
   applySkin(); // keep using your existing function
+  if (filterType === 'playful') {
+    playfulOverlay.style.display = 'block';
+    realisticOverlay.style.display = 'none';
+  } else {
+    realisticOverlay.style.display = 'block';
+    playfulOverlay.style.display = 'none';
+  }
 
   if (filterType === 'playful') {
     playfulOverlay.style.display = 'block';
