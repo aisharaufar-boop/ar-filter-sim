@@ -13,15 +13,15 @@
       padding: 0;
     }
     #uploader {
-      margin-top: 100px;
+      margin-top: 50px;
     }
     #phone {
       display: none;
-      margin: 40px auto;
-      width: 360px;
-      height: 640px;
-      border: 6px solid hotpink;
+      margin: 20px auto;
+      width: 320px;
+      height: 500px;
       border-radius: 30px;
+      border: 6px solid hotpink;
       position: relative;
       background: #111;
       overflow: hidden;
@@ -35,20 +35,29 @@
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: contain;
       display: none;
     }
     #timer {
       position: absolute;
       top: 10px;
       left: 10px;
-      font-size: 20px;
-      font-weight: bold;
       background: rgba(0,0,0,0.6);
       padding: 5px 10px;
       border-radius: 8px;
+      font-weight: bold;
+    }
+    /* === Playful overlays === */
+    .playful {
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+    }
+    /* === Realistic beauty effect === */
+    .realistic {
+      backdrop-filter: brightness(1.1) contrast(1.1) saturate(1.05);
+      background: radial-gradient(circle at center,
+        rgba(255,255,255,0.05) 0%,
+        rgba(0,0,0,0.2) 80%);
     }
   </style>
 </head>
@@ -57,7 +66,7 @@
   <div id="uploader">
     <h2>Take/Upload a Selfie</h2>
     <input type="file" id="selfieInput" accept="image/*">
-    <button id="startBtn" disabled>Start exposure</button>
+    <button id="startBtn" disabled>Start Exposure</button>
   </div>
 
   <div id="phone">
@@ -67,7 +76,6 @@
   </div>
 
   <script>
-    // --- Grab elements ---
     const selfieInput = document.getElementById("selfieInput");
     const selfieImg = document.getElementById("selfie");
     const startBtn = document.getElementById("startBtn");
@@ -76,25 +84,19 @@
     const overlay = document.getElementById("filterOverlay");
     const timerEl = document.getElementById("timer");
 
-    // --- Filter lists (replace these with your own PNGs later) ---
+    // --- Filters ---
     const playfulFilters = [
-      "https://i.ibb.co/4V8jM1H/dog-ears.png",
-      "https://i.ibb.co/3m8kgHs/rainbow.png",
-      "https://i.ibb.co/1rKzYyW/glasses.png",
-      "https://i.ibb.co/J5rwMKr/crown.png"
-    ];
-    const realisticFilters = [
-      "https://i.ibb.co/NZ5jD2w/soft-glow.png",
-      "https://i.ibb.co/sbTtQzL/makeup.png",
-      "https://i.ibb.co/4SkmbV7/smooth.png",
-      "https://i.ibb.co/ZH9Tgbd/vignette.png"
+      "filters/dog-ears.png",
+      "filters/rainbow.png",
+      "filters/glasses.png",
+      "filters/crown.png"
     ];
 
-    // --- Detect filter type from URL (?filter=playful / ?filter=realistic) ---
+    // --- URL parameter: ?filter=playful or ?filter=realistic ---
     const params = new URLSearchParams(window.location.search);
     const filterType = params.get("filter") || "playful";
 
-    // --- Enable Start button after file chosen ---
+    // Enable Start after file chosen
     selfieInput.addEventListener("change", () => {
       const file = selfieInput.files[0];
       if (!file) return;
@@ -107,38 +109,39 @@
       reader.readAsDataURL(file);
     });
 
-    // --- Timer function ---
+    // Timer
     function startTimer() {
       let remaining = 60;
       timerEl.textContent = "01:00";
-
       const timer = setInterval(() => {
         remaining--;
         let mins = String(Math.floor(remaining / 60)).padStart(2,"0");
         let secs = String(remaining % 60).padStart(2,"0");
         timerEl.textContent = `${mins}:${secs}`;
-
         if (remaining <= 0) clearInterval(timer);
       }, 1000);
     }
 
-    // --- Apply filter ---
+    // Apply filters
     function applyFilter(type) {
-      const filters = type === "playful" ? playfulFilters : realisticFilters;
-      const filterUrl = filters[Math.floor(Math.random() * filters.length)];
-      overlay.style.backgroundImage = `url('${filterUrl}')`;
-      overlay.style.display = "block";
+      if (type === "playful") {
+        const random = playfulFilters[Math.floor(Math.random() * playfulFilters.length)];
+        overlay.style.backgroundImage = `url('${random}')`;
+        overlay.className = "playful";
+        overlay.style.display = "block";
+      } else {
+        overlay.className = "realistic";
+        overlay.style.display = "block";
+      }
     }
 
-    // --- Start button click ---
+    // Start experiment
     startBtn.addEventListener("click", () => {
       uploader.style.display = "none";
       phoneEl.style.display = "block";
-
       applyFilter(filterType);
       startTimer();
     });
   </script>
-
 </body>
 </html>
