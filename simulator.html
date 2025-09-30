@@ -5,164 +5,140 @@
   <title>AR Filter Simulator</title>
   <style>
     body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: black;
-      height: 100vh;
-      margin: 0;
-      color: white;
+      background: #000;
+      color: #fff;
       font-family: Arial, sans-serif;
-    }
-    .container {
       text-align: center;
+      margin: 0;
+      padding: 0;
     }
-    #preview {
-      margin-top: 15px;
-      width: 300px;
-      height: 400px;
-      border: 4px solid #ff4081;
-      border-radius: 20px;
-      object-fit: cover;
+    #uploader {
+      margin-top: 100px;
+    }
+    #phone {
+      display: none;
+      margin: 40px auto;
+      width: 360px;
+      height: 640px;
+      border: 6px solid hotpink;
+      border-radius: 30px;
       position: relative;
+      background: #111;
+      overflow: hidden;
     }
-    .overlay {
+    #selfie {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    #filterOverlay {
       position: absolute;
-      width: 300px;
-      height: 400px;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
+      inset: 0;
       pointer-events: none;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      display: none;
     }
     #timer {
+      position: absolute;
+      top: 10px;
+      left: 10px;
       font-size: 20px;
       font-weight: bold;
-      margin-top: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 5px 10px;
+      border-radius: 8px;
     }
-
-    /* Popup */
-    #popup {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #222;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      z-index: 10;
-      box-shadow: 0 0 20px rgba(0,0,0,0.7);
-    }
-    #popup h3 {
-      margin-bottom: 15px;
-    }
-    #popup button {
-      margin: 5px;
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    #popup .playful { background: hotpink; color: white; }
-    #popup .realistic { background: lightblue; color: black; }
   </style>
 </head>
 <body>
-  <div class="container" id="uploader">
+
+  <div id="uploader">
     <h2>Take/Upload a Selfie</h2>
-    <input type="file" id="selfieInput" accept="image/*" capture="user">
-    <div style="position: relative; display: inline-block;">
-      <img id="preview" src="" alt="Preview" style="display:none;">
-      <img id="filterOverlay" class="overlay" src="" alt="Filter">
-    </div>
-    <div id="timer"></div>
+    <input type="file" id="selfieInput" accept="image/*">
+    <button id="startBtn" disabled>Start exposure</button>
   </div>
 
-  <!-- Manipulation check popup -->
-  <div id="popup">
-    <h3>The filter you just saw felt:</h3>
-    <button class="playful">Playful</button>
-    <button class="realistic">Realistic</button>
+  <div id="phone">
+    <img id="selfie" alt="Selfie">
+    <div id="filterOverlay"></div>
+    <div id="timer">01:00</div>
   </div>
 
   <script>
-    const selfieInput = document.getElementById('selfieInput');
-    const preview = document.getElementById('preview');
-    const filterOverlay = document.getElementById('filterOverlay');
-    const timerEl = document.getElementById('timer');
-    const popup = document.getElementById('popup');
+    // --- Grab elements ---
+    const selfieInput = document.getElementById("selfieInput");
+    const selfieImg = document.getElementById("selfie");
+    const startBtn = document.getElementById("startBtn");
+    const uploader = document.getElementById("uploader");
+    const phoneEl = document.getElementById("phone");
+    const overlay = document.getElementById("filterOverlay");
+    const timerEl = document.getElementById("timer");
 
-    // Playful filter options
+    // --- Filter lists (replace these with your own PNGs later) ---
     const playfulFilters = [
-      "https://i.imgur.com/8a9L4gA.png", // Dog ears
-      "https://i.imgur.com/svn7q0Q.png", // Rainbow vomit
-      "https://i.imgur.com/BVfV5hG.png", // Sunglasses
-      "https://i.imgur.com/vp8eGxq.png"  // Cartoon crown
+      "https://i.ibb.co/4V8jM1H/dog-ears.png",
+      "https://i.ibb.co/3m8kgHs/rainbow.png",
+      "https://i.ibb.co/1rKzYyW/glasses.png",
+      "https://i.ibb.co/J5rwMKr/crown.png"
     ];
-
-    // Realistic filter options
     const realisticFilters = [
-      "https://i.imgur.com/LxgNxlw.png", // Soft glow
-      "https://i.imgur.com/oPRadZn.png", // Makeup blush
-      "https://i.imgur.com/JeVpgmD.png", // Smooth skin
-      "https://i.imgur.com/6uKwbmC.png"  // Light vignette
+      "https://i.ibb.co/NZ5jD2w/soft-glow.png",
+      "https://i.ibb.co/sbTtQzL/makeup.png",
+      "https://i.ibb.co/4SkmbV7/smooth.png",
+      "https://i.ibb.co/ZH9Tgbd/vignette.png"
     ];
 
-    // Condition from URL
-    const qs = new URLSearchParams(location.search);
-    const filterType = qs.get('filter') || 'playful';
+    // --- Detect filter type from URL (?filter=playful / ?filter=realistic) ---
+    const params = new URLSearchParams(window.location.search);
+    const filterType = params.get("filter") || "playful";
 
-    selfieInput.addEventListener('change', () => {
+    // --- Enable Start button after file chosen ---
+    selfieInput.addEventListener("change", () => {
       const file = selfieInput.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = e => {
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-
-        // Random filter overlay
-        if (filterType === 'playful') {
-          const random = playfulFilters[Math.floor(Math.random() * playfulFilters.length)];
-          filterOverlay.src = random;
-        } else {
-          const random = realisticFilters[Math.floor(Math.random() * realisticFilters.length)];
-          filterOverlay.src = random;
-        }
-
-        // Start timer (60s)
-        let remaining = 60;
-        timerEl.textContent = "01:00";
-        const interval = setInterval(() => {
-          remaining--;
-          timerEl.textContent = `00:${remaining < 10 ? "0"+remaining : remaining}`;
-          if (remaining <= 0) {
-            clearInterval(interval);
-            showPopup();
-          }
-        }, 1000);
+        selfieImg.src = e.target.result;
+        startBtn.disabled = false;
       };
       reader.readAsDataURL(file);
     });
 
-    // Show manipulation check
-    function showPopup() {
-      popup.style.display = "block";
+    // --- Timer function ---
+    function startTimer() {
+      let remaining = 60;
+      timerEl.textContent = "01:00";
+
+      const timer = setInterval(() => {
+        remaining--;
+        let mins = String(Math.floor(remaining / 60)).padStart(2,"0");
+        let secs = String(remaining % 60).padStart(2,"0");
+        timerEl.textContent = `${mins}:${secs}`;
+
+        if (remaining <= 0) clearInterval(timer);
+      }, 1000);
     }
 
-    // Handle responses
-    document.querySelector("#popup .playful").addEventListener("click", () => {
-      alert("You chose: Playful"); // for testing, replace with save logic
-      popup.style.display = "none";
-    });
-    document.querySelector("#popup .realistic").addEventListener("click", () => {
-      alert("You chose: Realistic");
-      popup.style.display = "none";
+    // --- Apply filter ---
+    function applyFilter(type) {
+      const filters = type === "playful" ? playfulFilters : realisticFilters;
+      const filterUrl = filters[Math.floor(Math.random() * filters.length)];
+      overlay.style.backgroundImage = `url('${filterUrl}')`;
+      overlay.style.display = "block";
+    }
+
+    // --- Start button click ---
+    startBtn.addEventListener("click", () => {
+      uploader.style.display = "none";
+      phoneEl.style.display = "block";
+
+      applyFilter(filterType);
+      startTimer();
     });
   </script>
+
 </body>
 </html>
