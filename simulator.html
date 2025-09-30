@@ -168,7 +168,7 @@ selfieInput.addEventListener('change', () => {
   reader.onload = e => {
     selfieImg.src = e.target.result;
     selfieImg.style.display = 'block';
-    startBtn.disabled = false;
+    startBtn.removeAttribute('disabled');
     startBtn.style.cursor = 'pointer';
   };
   reader.readAsDataURL(file);
