@@ -168,8 +168,10 @@ selfieInput.addEventListener('change', () => {
   reader.onload = e => {
     selfieImg.src = e.target.result;
     selfieImg.style.display = 'block';
-    startBtn.removeAttribute('disabled');
-    startBtn.style.cursor = 'pointer';
+    startBtn.disabled = false;
+startBtn.removeAttribute('disabled'); // ✅ force-enable
+startBtn.style.cursor = 'pointer';
+startBtn.style.opacity = '1'; // make sure it looks active
   };
   reader.readAsDataURL(file);
 });
