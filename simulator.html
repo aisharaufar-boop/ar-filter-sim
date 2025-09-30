@@ -57,8 +57,16 @@
   </style>
 </head>
 <body>
+  <!-- Selfie uploader (shown first) -->
+<div id="uploader" style="display:grid; gap:12px; place-items:center; padding:16px;">
+  <h3 style="margin:8px 0 0;">Take/Upload a Selfie</h3>
+  <p style="margin:0; color:#b3b3b3; font-size:14px;">Front camera, portrait, neutral lighting. No stickers or text.</p>
+  <input id="selfieInput" type="file" accept="image/*" capture="user" style="margin-top:8px;">
+  <button id="startBtn" disabled style="padding:10px 14px; border-radius:10px; font-weight:600; background:#1f6feb; color:#fff; border:0; cursor:not-allowed;">Start exposure</button>
+</div>
+
   <div class="app">
-    <div class="phone">
+    <div class="phone" id="phone" style="display:none;">
       <div class="notch"></div>
       <div class="skin tiktok" id="skin">
         <div class="topbar">
@@ -67,7 +75,26 @@
         </div>
         <div class="video-wrap">
           <div class="video-frame">
-            <div class="placeholder">[Insert demo video here]</div>
+            <!-- Selfie display goes here -->
+<img id="selfie" alt="Selfie" style="display:none; width:100%; height:100%; object-fit:cover;">
+
+<!-- Filter overlays (we toggle one of these by condition) -->
+<div id="playfulOverlay" style="display:none; position:absolute; inset:0; pointer-events:none;">
+  <!-- fun tint + subtle hue wiggle + floating emojis -->
+  <div style="position:absolute; inset:0; background:rgba(255,200,50,0.08);"></div>
+  <div style="position:absolute; inset:0; animation: hue 5s linear infinite;"></div>
+  <div style="position:absolute; right:12px; top:12px; font-size:28px;">✨</div>
+  <div style="position:absolute; left:18px; bottom:18px; font-size:28px;">😺</div>
+</div>
+
+<div id="realisticOverlay" style="display:none; position:absolute; inset:0; pointer-events:none;">
+  <!-- soft beauty vibe: gentle contrast/saturation + vignette -->
+  <div style="position:absolute; inset:0; background:radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.18) 85%);"></div>
+</div>
+
+<style>
+@keyframes hue { from{ filter:hue-rotate(0deg);} to{ filter:hue-rotate(360deg);} }
+</style>
           </div>
           <div class="side" id="sideIcons">
             <div class="icon">❤</div>
@@ -104,6 +131,47 @@
     const timerEl = document.getElementById('timer');
     const overlay = document.getElementById('overlay');
     const submitBtn = document.getElementById('submitBtn');
+
+    const uploader = document.getElementById('uploader');
+    const selfieInput = document.getElementById('selfieInput');
+    const startBtn = document.getElementById('startBtn');
+    const phoneEl = document.getElementById('phone');
+    const selfieImg = document.getElementById('selfie');
+    const playfulOverlay = document.getElementById('playfulOverlay');
+    const realisticOverlay = document.getElementById('realisticOverlay');
+
+// Show selfie preview + enable start button
+selfieInput.addEventListener('change', () => {
+  const file = selfieInput.files && selfieInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    selfieImg.src = e.target.result;
+    selfieImg.style.display = 'block';
+    startBtn.disabled = false;
+    startBtn.style.cursor = 'pointer';
+  };
+  reader.readAsDataURL(file);
+});
+
+// When Start clicked → show phone + apply overlay + begin timer
+startBtn.addEventListener('click', () => {
+  uploader.style.display = 'none';
+  phoneEl.style.display = 'block';
+
+  applySkin(); // keep using your existing function
+
+  if (filterType === 'playful') {
+    playfulOverlay.style.display = 'block';
+    realisticOverlay.style.display = 'none';
+  } else {
+    realisticOverlay.style.display = 'block';
+    playfulOverlay.style.display = 'none';
+  }
+
+  remaining = 180;  // reset to 3 minutes
+  startTimer();     // call your existing timer function
+});
 
     function applySkin(){
       if(platform === 'instagram'){
