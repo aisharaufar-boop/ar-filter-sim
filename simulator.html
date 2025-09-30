@@ -163,17 +163,20 @@
 // Show selfie preview + enable start button
 selfieInput.addEventListener('change', () => {
   const file = selfieInput.files && selfieInput.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    selfieImg.src = e.target.result;
-    selfieImg.style.display = 'block';
-    startBtn.disabled = false;
-startBtn.removeAttribute('disabled'); // ✅ force-enable
-startBtn.style.cursor = 'pointer';
-startBtn.style.opacity = '1'; // make sure it looks active
-  };
-  reader.readAsDataURL(file);
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        selfieImg.src = e.target.result;
+        selfieImg.style.display = 'block';
+
+        // Enable the start button
+        startBtn.disabled = false;
+        startBtn.removeAttribute('disabled');
+        startBtn.style.cursor = 'pointer';
+        startBtn.style.opacity = '1';
+    };
+    reader.readAsDataURL(file);
 });
 
 // When Start clicked → show phone + apply overlay + begin timer
