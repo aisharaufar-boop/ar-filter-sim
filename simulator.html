@@ -1,147 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>AR Filter Simulator</title>
-  <style>
-    body {
-      background: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    #uploader {
-      margin-top: 50px;
-    }
-    #phone {
-      display: none;
-      margin: 20px auto;
-      width: 320px;
-      height: 500px;
-      border-radius: 30px;
-      border: 6px solid hotpink;
-      position: relative;
-      background: #111;
-      overflow: hidden;
-    }
-    #selfie {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    #filterOverlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      display: none;
-    }
-    #timer {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.6);
-      padding: 5px 10px;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-    /* === Playful overlays === */
-    .playful {
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: contain;
-    }
-    /* === Realistic beauty effect === */
-    .realistic {
-      backdrop-filter: brightness(1.1) contrast(1.1) saturate(1.05);
-      background: radial-gradient(circle at center,
-        rgba(255,255,255,0.05) 0%,
-        rgba(0,0,0,0.2) 80%);
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>AR Filter Simulator (Self-Contained)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --phone-w: 320px; --phone-h: 560px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background:#000; color:#fff; font-family: Arial, sans-serif;
+  }
+  #uploader { text-align:center; padding:16px; }
+  #uploader button {
+    margin-top:10px; padding:10px 14px; border:0; border-radius:10px;
+    background:#1f6feb; color:#fff; font-weight:700; cursor:not-allowed; opacity:.6;
+  }
+  #uploader button.enabled { cursor:pointer; opacity:1; }
+  /* Phone frame */
+  #phone {
+    display:none; position:relative; width:var(--phone-w); height:var(--phone-h);
+    border-radius:28px; overflow:hidden; background:#111; border:6px solid hotpink;
+    box-shadow:0 0 24px rgba(255,105,180,.35);
+  }
+  #selfie {
+    width:100%; height:100%; object-fit:cover; display:block; transition:filter .25s ease;
+  }
+  /* Overlay SVG sits above selfie */
+  #overlaySvg {
+    position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:2;
+  }
+  /* Timer */
+  #timer {
+    position:absolute; top:10px; left:10px; z-index:3;
+    background:rgba(0,0,0,.55); padding:6px 10px; border-radius:10px; font-weight:700;
+  }
+  /* Popup (manipulation check) */
+  #popup {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);
+    place-items:center; z-index:10;
+  }
+  #popup .card {
+    background:#121212; border:1px solid #333; border-radius:12px; padding:18px; width:min(90vw,360px);
+    text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.4);
+  }
+  #popup .row { margin-top:12px; display:flex; gap:10px; justify-content:center; }
+  #popup button {
+    border:0; border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer;
+  }
+  #btnPlayful { background:#ff69b4; color:#fff; }
+  #btnRealistic { background:#9ad1ff; color:#111; }
+</style>
 </head>
 <body>
 
-  <div id="uploader">
-    <h2>Take/Upload a Selfie</h2>
-    <input type="file" id="selfieInput" accept="image/*">
-    <button id="startBtn" disabled>Start Exposure</button>
+<!-- Upload screen -->
+<div id="uploader">
+  <h2>Take/Upload a Selfie</h2>
+  <p style="opacity:.75">Front camera, portrait, neutral lighting. No stickers or text.</p>
+  <input id="selfieInput" type="file" accept="image/*" capture="user" />
+  <br />
+  <button id="startBtn" disabled>Start exposure</button>
+</div>
+
+<!-- Phone screen -->
+<div id="phone">
+  <img id="selfie" alt="Selfie" />
+  <svg id="overlaySvg" viewBox="0 0 320 560" preserveAspectRatio="xMidYMid slice"></svg>
+  <div id="timer">01:00</div>
+</div>
+
+<!-- Manipulation check -->
+<div id="popup">
+  <div class="card">
+    <h3>The filter you just saw felt…</h3>
+    <div class="row">
+      <button id="btnPlayful">Playful</button>
+      <button id="btnRealistic">Realistic</button>
+    </div>
   </div>
+</div>
 
-  <div id="phone">
-    <img id="selfie" alt="Selfie">
-    <div id="filterOverlay"></div>
-    <div id="timer">01:00</div>
-  </div>
+<script>
+  // Elements
+  const input = document.getElementById('selfieInput');
+  const startBtn = document.getElementById('startBtn');
+  const uploader = document.getElementById('uploader');
+  const phone = document.getElementById('phone');
+  const img = document.getElementById('selfie');
+  const svg = document.getElementById('overlaySvg');
+  const timerEl = document.getElementById('timer');
+  const popup = document.getElementById('popup');
+  const btnPlayful = document.getElementById('btnPlayful');
+  const btnRealistic = document.getElementById('btnRealistic');
 
-  <script>
-    const selfieInput = document.getElementById("selfieInput");
-    const selfieImg = document.getElementById("selfie");
-    const startBtn = document.getElementById("startBtn");
-    const uploader = document.getElementById("uploader");
-    const phoneEl = document.getElementById("phone");
-    const overlay = document.getElementById("filterOverlay");
-    const timerEl = document.getElementById("timer");
+  // Condition from URL (?filter=playful | realistic)
+  const qs = new URLSearchParams(location.search);
+  const filterType = (qs.get('filter') || 'playful').toLowerCase();
 
-    // --- Filters ---
-    const playfulFilters = [
-      "filters/dog-ears.png",
-      "filters/rainbow.png",
-      "filters/glasses.png",
-      "filters/crown.png"
-    ];
+  // Enable Start after a selfie is chosen
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      img.src = e.target.result;
+      startBtn.disabled = false;
+      startBtn.classList.add('enabled');
+      startBtn.style.cursor = 'pointer';
+    };
+    reader.readAsDataURL(file);
+  });
 
-    // --- URL parameter: ?filter=playful or ?filter=realistic ---
-    const params = new URLSearchParams(window.location.search);
-    const filterType = params.get("filter") || "playful";
+  // Start exposure
+  startBtn.addEventListener('click', () => {
+    if (startBtn.disabled) return;
+    uploader.style.display = 'none';
+    phone.style.display = 'block';
 
-    // Enable Start after file chosen
-    selfieInput.addEventListener("change", () => {
-      const file = selfieInput.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = e => {
-        selfieImg.src = e.target.result;
-        startBtn.disabled = false;
-      };
-      reader.readAsDataURL(file);
+    applyFilter(filterType);   // draw overlay / beauty effect
+    startTimer(60, timerEl, () => { // on complete → manipulation check
+      popup.style.display = 'grid';
     });
+  });
 
-    // Timer
-    function startTimer() {
-      let remaining = 60;
-      timerEl.textContent = "01:00";
-      const timer = setInterval(() => {
-        remaining--;
-        let mins = String(Math.floor(remaining / 60)).padStart(2,"0");
-        let secs = String(remaining % 60).padStart(2,"0");
-        timerEl.textContent = `${mins}:${secs}`;
-        if (remaining <= 0) clearInterval(timer);
-      }, 1000);
-    }
-
-    // Apply filters
-    function applyFilter(type) {
-      if (type === "playful") {
-        const random = playfulFilters[Math.floor(Math.random() * playfulFilters.length)];
-        overlay.style.backgroundImage = `url('${random}')`;
-        overlay.className = "playful";
-        overlay.style.display = "block";
-      } else {
-        overlay.className = "realistic";
-        overlay.style.display = "block";
+  // Timer
+  function startTimer(seconds, el, onDone) {
+    let remaining = seconds;
+    updateTime();
+    const iv = setInterval(() => {
+      remaining--;
+      updateTime();
+      if (remaining <= 0) {
+        clearInterval(iv);
+        onDone && onDone();
       }
+    }, 1000);
+    function updateTime() {
+      const m = String(Math.floor(remaining / 60)).padStart(2,'0');
+      const s = String(remaining % 60).padStart(2,'0');
+      el.textContent = `${m}:${s}`;
     }
+  }
 
-    // Start experiment
-    startBtn.addEventListener("click", () => {
-      uploader.style.display = "none";
-      phoneEl.style.display = "block";
-      applyFilter(filterType);
-      startTimer();
-    });
-  </script>
+  // Clear overlay / effects
+  function clearOverlay() {
+    svg.innerHTML = '';
+    img.style.filter = 'none';
+  }
+
+  // Apply chosen filter family
+  function applyFilter(type) {
+    clearOverlay();
+    // Choose a variant for variety
+    if (type === 'playful') {
+      const variants = ['dog','glasses','crown','rainbow'];
+      renderPlayful(variants[Math.floor(Math.random()*variants.length)]);
+    } else {
+      const variants = ['glow','smooth','vignette','makeup'];
+      renderRealistic(variants[Math.floor(Math.random()*variants.length)]);
+    }
+  }
+
+  // ------- PLAYFUL (cartoony, obvious) -------
+  function renderPlayful(kind) {
+    // base gentle tint
+    svg.innerHTML += `<rect x="0" y="0" width="320" height="560" fill="rgba(255,105,180,0.08)"></rect>`;
+
+    if (kind === 'dog') {
+      // two "ears" triangles with soft edges
+      svg.innerHTML += `
+        <path d="M40,40 C30,10 85,10 75,60 L55,85 Z" fill="#8b5a2b" opacity="0.95"></path>
+        <path d="M280,40 C290,10 235,10 245,60 L265,85 Z" fill="#8b5a2b" opacity="0.95"></path>
+        <ellipse cx="60" cy="75" rx="10" ry="8" fill="#c98f5a"></ellipse>
+        <ellipse cx="260" cy="75" rx="10" ry="8" fill="#c98f5a"></ellipse>`;
+    }
+    if (kind === 'glasses') {
+      svg.innerHTML += `
+        <circle cx="120" cy="220" r="50" fill="none" stroke="black" stroke-opacity=".8" stroke-width="10"></circle>
+        <circle cx="200" cy="220" r="50" fill="none" stroke="black" stroke-opacity=".8" stroke-width="10"></circle>
+        <rect x="155" y="210" width="10" height="20" fill="black" opacity=".8"></rect>`;
+    }
+    if (kind === 'crown') {
+      svg.innerHTML += `
+        <polygon points="90,80 120,40 150,80 180,40 210,80 210,110 90,110"
+                 fill="gold" stroke="#e0b000" stroke-width="4"></polygon>
+        <circle cx="120" cy="42" r="6" fill="#ff66cc"></circle>
+        <circle cx="180" cy="42" r="6" fill="#66ccff"></circle>`;
+    }
+    if (kind === 'rainbow') {
+      // rainbow "vomit" down the center
+      svg.innerHTML += `
+        <defs>
+          <linearGradient id="rb" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#ff0000"/>
+            <stop offset="16%" stop-color="#ff7f00"/>
+            <stop offset="33%" stop-color="#ffff00"/>
+            <stop offset="50%" stop-color="#00ff00"/>
+            <stop offset="66%" stop-color="#0000ff"/>
+            <stop offset="83%" stop-color="#4b0082"/>
+            <stop offset="100%" stop-color="#9400d3"/>
+          </linearGradient>
+        </defs>
+        <rect x="145" y="240" width="30" height="260" fill="url(#rb)" opacity="0.85"></rect>`;
+    }
+  }
+
+  // ------- REALISTIC (beauty) -------
+  function renderRealistic(kind) {
+    // subtle global beautify (tweak as needed)
+    // note: stacking small effects looks more "beauty-like"
+    if (kind === 'smooth') {
+      img.style.filter = 'brightness(1.06) contrast(1.05) saturate(1.05) blur(0.6px)';
+    } else if (kind === 'glow') {
+      img.style.filter = 'brightness(1.1) contrast(1.08) saturate(1.06)';
+      svg.innerHTML += `
+        <radialGradient id="glowGrad" cx="50%" cy="45%" r="65%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.10)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0.20)"/>
+        </radialGradient>
+        <rect x="0" y="0" width="320" height="560" fill="url(#glowGrad)"></rect>`;
+    } else if (kind === 'vignette') {
+      img.style.filter = 'brightness(1.05) contrast(1.05)';
+      svg.innerHTML += `
+        <radialGradient id="vig" cx="50%" cy="50%" r="70%">
+          <stop offset="60%" stop-color="rgba(0,0,0,0)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0.35)"/>
+        </radialGradient>
+        <rect x="0" y="0" width="320" height="560" fill="url(#vig)"></rect>`;
+    } else if (kind === 'makeup') {
+      img.style.filter = 'brightness(1.05) contrast(1.04) saturate(1.08)';
+      // soft blush "cheeks" (approx positions)
+      svg.innerHTML += `
+        <ellipse cx="110" cy="290" rx="26" ry="16" fill="rgba(255,105,180,0.25)"></ellipse>
+        <ellipse cx="210" cy="290" rx="26" ry="16" fill="rgba(255,105,180,0.25)"></ellipse>
+        <rect x="140" y="335" width="40" height="10" rx="5" fill="rgba(230,60,90,0.25)"></rect>
+        <radialGradient id="mkV" cx="50%" cy="45%" r="65%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.06)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0.18)"/>
+        </radialGradient>
+        <rect x="0" y="0" width="320" height="560" fill="url(#mkV)"></rect>`;
+    }
+  }
+
+  // Manipulation check buttons (you can wire these to Qualtrics or log)
+  btnPlayful.addEventListener('click', () => {
+    console.log('MCQ response: Playful');
+    popup.style.display = 'none';
+    alert('Thanks! (Playful recorded)');
+  });
+  btnRealistic.addEventListener('click', () => {
+    console.log('MCQ response: Realistic');
+    popup.style.display = 'none';
+    alert('Thanks! (Realistic recorded)');
+  });
+</script>
 </body>
 </html>
